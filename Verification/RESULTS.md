@@ -2,6 +2,10 @@
 
 Date: 2026-10-23 (UTC). Version 3 / The Warden.
 
+Start/input follow-up: added a clickable Begin/Resume button, numpad Enter support, and a compile-flag guard for projects using the new Input System only. Such projects now show explicit setup instructions before any legacy Input call. Native keyboard/button interaction still needs verification in Unity; no local user Console message was available to confirm the original cause. Render-pipeline, VR, and Android settings were not changed.
+
+Runtime reference compilation passed with zero warnings/errors for both `ENABLE_LEGACY_INPUT_MANAGER` and new-system-only `ENABLE_INPUT_SYSTEM` configurations. Serialized asset validation remains at 20,871 passed assertions. These checks do not inject native key events or verify Game view focus, cursor capture, or UI clicks in the Editor.
+
 Material repair follow-up: added `Assets/EscapeMaze/Editor/MazeMaterialRepair.cs` and an Editor-only assembly definition after a user reported pink Standard materials in a newer Unity project. The helper chooses Standard or URP Simple Lit according to the active renderer and preserves colour/emission. The runtime checks below predate this Editor-only addition; native Editor compilation, automatic repair, and on-screen rendering remain unverified. The available environment still has no Unity Editor.
 
 The follow-up serialized scene/asset validation passed 20,871 assertions. The material repair source was also reference-compiled with the available UnityEditor managed reference and Unity 2022.3.62 UnityEngine references; this does not launch the Editor or verify a URP conversion. Per-asset saving is resolved at runtime for compatibility with older Editor assemblies. No reference DLLs were added to the repository.

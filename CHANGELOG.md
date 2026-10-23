@@ -1,3 +1,9 @@
+# Desktop start/input compatibility fix
+
+- Added a visible Begin/Resume Exploration button and support for both Return and numpad Enter.
+- Detects a new-Input-System-only project before polling legacy Input APIs; shows a clear Enable Controls screen instead of throwing before Enter/click can start the game.
+- Documents Active Input Handling = Both / Input Manager (Old), Game view focus, and Console Error Pause when importing into another Unity project. Does not change project settings or add input/VR packages.
+
 # Desktop material compatibility fix
 
 - Added an Editor-only **LUMEN → Fix Pink Materials** command and import-time repair for Built-in/URP shader mismatches.

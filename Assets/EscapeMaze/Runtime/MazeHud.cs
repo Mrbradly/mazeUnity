@@ -72,6 +72,7 @@ namespace EscapeMaze
             DrawHeader();
             if (VictoryVisible) DrawVictory();
             else if (CaughtVisible) DrawCaught();
+            else if (!input.DesktopInputAvailable) DrawInputSetup();
             else if (!input.IsActive) DrawWelcome();
             else DrawPlaying();
             GUI.matrix = previous;
@@ -173,7 +174,7 @@ namespace EscapeMaze
         private void DrawWelcome()
         {
             Fill(new Rect(0, 114, 1280, 550), new Color(.01f, .025f, .04f, .35f));
-            Panel(new Rect(74, 169, 680, 443));
+            Panel(new Rect(74, 169, 680, 455));
             Label(110, 197, 600, "EXPLORATION  /  THREE SIGNALS  /  ONE EXIT", small);
             Label(106, 245, 620, "THE WAY OUT", title);
             Fill(new Rect(110, 328, 96, 3), MazePalette.Mint);
@@ -181,8 +182,23 @@ namespace EscapeMaze
             Label(110, 401, 600, "Follow the coloured alcoves. Recover each key.", text);
             Label(110, 431, 600, "Unlock the brass seal, then step into the green exit.", text);
             Label(110, 465, 600, "THE WARDEN PATROLS. BREAK SIGHT AT CORNERS. YOU ARE FASTER.", micro);
-            Label(110, 494, 600, "CLICK THE GAME VIEW OR PRESS ENTER TO BEGIN / RESUME", small);
-            Label(110, 538, 600, "WASD  MOVE     MOUSE  LOOK     E  USE     M  MAP     ESC  PAUSE", micro);
+            Label(110, 494, 600, "PRESS ENTER OR SELECT BEGIN / RESUME EXPLORATION", small);
+            if (ActionButton(new Rect(110, 535, 600, 46), session.ElapsedSeconds > 0f ? "RESUME EXPLORATION    →" : "BEGIN EXPLORATION    →"))
+                input.Capture();
+            Label(110, 592, 600, "WASD  MOVE     MOUSE  LOOK     E  USE     M  MAP     ESC  PAUSE", micro);
+        }
+
+        private void DrawInputSetup()
+        {
+            Fill(new Rect(0, 114, 1280, 550), new Color(.01f, .025f, .04f, .35f));
+            Panel(new Rect(74, 169, 760, 443));
+            Label(110, 197, 680, "DESKTOP CONTROLS / PROJECT SETUP", small);
+            Label(106, 245, 700, "ENABLE CONTROLS", title);
+            Label(110, 350, 680, "This project's input setting disables the keyboard/mouse adapter.", text);
+            Label(110, 401, 680, "1. Stop Play mode.", text);
+            Label(110, 435, 680, "2. Edit > Project Settings > Player > Other Settings.", text);
+            Label(110, 469, 680, "3. Set Active Input Handling to Both. Restart Unity if prompted.", text);
+            Label(110, 530, 680, "Then press Play, click the Game view, and choose Begin Exploration.", small);
         }
 
         private void DrawVictory()

@@ -13,7 +13,13 @@ Version 3 adds **the Warden**, one patrolling mechanical sentinel. It spots the 
 1. Extract the project ZIP. In Unity Hub, choose **Add project from disk** and select the folder containing `Assets`, `Packages`, and `ProjectSettings`.
 2. Open with Unity **2022.3.62f1**. Allow Unity to import assets and resolve its Test Framework package. Unity generates the normal `Library` and any missing default settings on first import.
 3. Open **Assets/EscapeMaze/Scenes/EscapeMaze.unity** and press **Play**.
-4. Click inside the Game view or press **Enter** to capture the mouse.
+4. Click inside the Game view and choose **Begin Exploration**, or press **Enter** / **numpad Enter**, to capture the mouse.
+
+### Enter or clicks do not start the game
+
+This desktop adapter uses Unity's legacy Input Manager. If you imported the assets into a Unity 6 project configured for the new Input System only, Unity can throw an error before the start controls are read. Stop Play mode, then open **Edit → Project Settings → Player → Other Settings → Active Input Handling** and choose **Both** (or **Input Manager (Old)**). Restart Unity if requested, press Play, click the Game view, and choose **Begin Exploration**. If Unity has paused itself because Console **Error Pause** is enabled, fix the error first and unpause before testing again.
+
+The updated adapter detects the new-Input-System-only configuration before calling legacy input APIs and displays an **Enable Controls** screen with these steps. It also accepts numpad Enter and exposes a clickable **Begin/Resume Exploration** button. It does not change your project settings or install an input package. The original supplied project already selects the old Input Manager; importing only its Assets into another project keeps that other project's input setting.
 
 ### Pink or magenta materials, especially after importing into a Unity 6 URP project
 
@@ -35,7 +41,7 @@ The repair uses per-material saving on Unity versions that expose it (including 
 | Mouse | Look |
 | E or left mouse button | Use the key or door under the crosshair, within 2.8 metres |
 | Escape | Release mouse and pause movement / active timer |
-| Click or Enter | Resume |
+| Begin/Resume button, click, or Enter / numpad Enter | Begin / resume |
 | M | Toggle the map of discovered areas |
 | Explore again button | Reload the maze and reset all progress and discovery |
 | Try again button after capture | Reset the maze, keys, map, Warden, and startup grace |

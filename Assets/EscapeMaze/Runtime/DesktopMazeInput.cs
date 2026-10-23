@@ -10,7 +10,18 @@ namespace EscapeMaze
         public override Vector2 Move { get { return move; } }
         public override Vector2 LookDegrees { get { return look; } }
         public override bool UsePressed { get { return usePressed; } }
-        public override bool IsActive { get { return captured && Application.isFocused; } }
+        public override bool IsActive { get { return DesktopInputAvailable && captured && Application.isFocused; } }
+        public bool DesktopInputAvailable
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+                return false;
+#else
+                return true;
+#endif
+            }
+        }
         public bool MapVisible { get; private set; }
         private bool captured;
         private Vector2 move;
@@ -22,11 +33,14 @@ namespace EscapeMaze
             move = Vector2.zero;
             look = Vector2.zero;
             usePressed = false;
+            // Imported Unity 6 projects may disable the legacy backend. Explain that in
+            // the HUD instead of throwing every frame before the player can start.
+            if (!DesktopInputAvailable) { if (captured) Release(); return; }
             if (session.Progress.IsFinished) { if (captured) Release(); return; }
             if (Input.GetKeyDown(KeyCode.Escape)) { Release(); return; }
             if (!captured)
             {
-                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return)) Capture();
+                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) Capture();
                 return;
             }
             if (!IsActive) return;
@@ -42,6 +56,7 @@ namespace EscapeMaze
 
         public void Capture()
         {
+            if (!DesktopInputAvailable || session.Progress.IsFinished) return;
             captured = true;
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
