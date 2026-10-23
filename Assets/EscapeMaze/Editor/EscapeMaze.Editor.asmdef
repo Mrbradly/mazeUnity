@@ -1,0 +1,7 @@
+{
+  "name": "EscapeMaze.Editor",
+  "rootNamespace": "EscapeMaze.Editor",
+  "references": ["EscapeMaze"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

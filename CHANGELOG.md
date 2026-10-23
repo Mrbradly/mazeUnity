@@ -1,3 +1,9 @@
+# Desktop material compatibility fix
+
+- Added an Editor-only **LUMEN → Fix Pink Materials** command and import-time repair for Built-in/URP shader mismatches.
+- Preserves maze material colours, emission, shared references, and opaque matte settings while choosing the current renderer's shader. Limits writes to the maze materials and leaves render-pipeline/VR/Android settings unchanged.
+- Added instructions for importing only the repair folder into an existing project, plus Unity 6's built-in material-converter route. Native Editor execution remains to be verified locally.
+
 # Version 3 — The Warden
 
 - Added a single mechanical sentinel assembled from sixteen primitive cubes, with an amber/red state eye. Kept it outside static batching.

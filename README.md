@@ -15,6 +15,20 @@ Version 3 adds **the Warden**, one patrolling mechanical sentinel. It spots the 
 3. Open **Assets/EscapeMaze/Scenes/EscapeMaze.unity** and press **Play**.
 4. Click inside the Game view or press **Enter** to capture the mouse.
 
+### Pink or magenta materials, especially after importing into a Unity 6 URP project
+
+The saved materials use the Built-in renderer's Standard shader. A URP project cannot render that shader and normally displays it magenta. Pink can also indicate a missing shader or a shader compilation error, so check the Console if the repair below does not resolve it.
+
+This project now includes an Editor-only repair at **LUMEN → Fix Pink Materials**. It checks the active renderer and uses **Standard** for Built-in or **Universal Render Pipeline/Simple Lit** for URP. It copies each maze material's colour and emission, keeps shared material references intact, and saves only the repaired maze materials. On import, it automatically repairs maze materials whose shader differs from the active renderer's supported choice. It does not install URP or change project renderer, VR, Android, or player settings. Other render pipelines receive an explanatory message instead of a conversion.
+
+To add the fix to an existing downloaded/imported copy without replacing your scene or settings, download the current repository ZIP and copy **Assets/EscapeMaze/Editor** (and `Editor.meta`) into the same location in your project. Allow Unity to compile, then choose **LUMEN → Fix Pink Materials**. The Editor folder includes its assembly definition. Avoid copying the whole project over a copy you have edited.
+
+Alternatively, Unity 6 provides **Window → Rendering → Render Pipeline Converter**. For a URP project, select **Built-in to URP**, enable **Material Upgrade**, click **Initialize Converters**, select the maze materials, then **Convert Assets**. Back up edited materials before using Unity's converter. Convert only when your active project renderer is URP. For the original desktop baseline, open the supplied project with Unity 2022.3.62f1 and its Built-in renderer instead.
+
+The repair's native Editor execution and final on-screen appearance still need verification in your Unity installation. Supporting desktop material conversion does not establish Unity 6 or ClassVR device compatibility.
+
+The repair uses per-material saving on Unity versions that expose it (including the intended Unity 2022.3 baseline and Unity 6). In an older Editor lacking that API it leaves the repaired materials dirty and asks you to use **File → Save Project**, rather than automatically saving unrelated assets.
+
 | Control | Action |
 | --- | --- |
 | WASD or arrow keys | Walk |
