@@ -94,7 +94,84 @@ internal static class RulesCheck
         Check(!exploration.IsDiscovered(layout.Find('c')), "Remote alcove stays hidden");
         Check(new MazeExploration(layout).VisitedCount == 0, "Replay starts with a fresh survey");
         CheckSentinel(layout, Path.Combine(Path.GetDirectoryName(args[0]), "SentinelPatrol.txt"));
-        Console.WriteLine("PASS " + checks + " assertions (pure C# rules, navigation, discovery, and sentinel decisions; not Unity physics)");
+        CheckMovingWardens(layout, Path.GetDirectoryName(args[0]));
+        CheckBlaster();
+        Console.WriteLine("PASS " + checks + " assertions (pure C# gameplay, continuous Warden motion, stun, and shooting cooldown; not Unity physics)");
+    }
+
+    private static void CheckMovingWardens(MazeLayout layout, string dataPath)
+    {
+        var spawns = new HashSet<MazeCell>();
+        foreach (string file in new[] { "SentinelPatrol.txt", "SentinelPatrol2.txt", "SentinelPatrol3.txt" })
+        {
+            MazeCell[] route = SentinelBrain.ParsePatrol(File.ReadAllText(Path.Combine(dataPath, file)));
+            Check(spawns.Add(route[0]), "Each Warden starts in a separate corridor");
+            var brain = new SentinelBrain(layout, route);
+            var motion = new SentinelNavigator(brain, route[0]);
+            var reached = new HashSet<MazeCell>();
+            float moved = 0f;
+            int slowFrames = 0;
+            for (int i = 0; i < 3600; i++)
+            {
+                float x = motion.X, z = motion.Z;
+                brain.Observe(layout.Find('S'), false, .05f);
+                motion.Advance(.05f, 1.2f, false);
+                float distance = Math.Abs(motion.X - x) + Math.Abs(motion.Z - z);
+                // A waypoint U-turn can reverse part of this frame's travel, so
+                // displacement may be less than the distance walked in that frame.
+                Check(distance <= .0601f, "Patrol never exceeds the configured speed");
+                slowFrames = distance < .0599f ? slowFrames + 1 : 0;
+                Check(slowFrames <= 1, "Patrol does not stall between waypoints");
+                moved += distance;
+                var cell = new MazeCell((int)Math.Round(motion.X / MazeLayout.CellSize), (int)Math.Round(-motion.Z / MazeLayout.CellSize));
+                Check(layout.IsWalkable(cell, false), "Continuous movement stays in corridors with door closed");
+                Check(Math.Abs(motion.X / MazeLayout.CellSize - Math.Round(motion.X / MazeLayout.CellSize)) < .0001f ||
+                      Math.Abs(motion.Z / MazeLayout.CellSize - Math.Round(motion.Z / MazeLayout.CellSize)) < .0001f,
+                    "Motion stays on a cardinal grid edge without corner cutting");
+                foreach (MazeCell waypoint in route)
+                    if (Math.Abs(motion.X - waypoint.X * MazeLayout.CellSize) + Math.Abs(motion.Z + waypoint.Row * MazeLayout.CellSize) < .07f)
+                        reached.Add(waypoint);
+            }
+            Check(moved > 210f, "Patrol covers more than 210 metres in three active minutes including U-turns");
+            foreach (MazeCell point in route) Check(reached.Contains(point), "Continuous patrol visits every waypoint: " + file + " " + point);
+            float stoppedX = motion.X, stoppedZ = motion.Z;
+            brain.Observe(layout.Find('a'), true, .01f);
+            brain.Stun(4f);
+            Check(brain.State == SentinelState.Stunned && !brain.LastSeenPlayer.HasValue, "Shot clears chase memory and stuns");
+            for (int i = 0; i < 40; i++)
+            {
+                motion.Advance(.1f, 2.1f, false);
+                Check(motion.X == stoppedX && motion.Z == stoppedZ, "Stun prevents mid-edge movement");
+                brain.Observe(layout.Find('a'), true, .1f);
+            }
+            brain.Observe(layout.Find('S'), false, .01f); // Tolerate float timer rounding.
+            Check(brain.State == SentinelState.Patrol && !brain.LastSeenPlayer.HasValue, "After four seconds Warden resumes patrol, without hidden tracking");
+            motion.Advance(.05f, 1.2f, false);
+            Check(motion.X != stoppedX || motion.Z != stoppedZ, "Movement resumes after stun at the exact stopped edge");
+            brain.Stun(4f);
+            brain.Observe(layout.Find('S'), false, 1f);
+            brain.Stun(4f);
+            Check(brain.StunRemaining == 4f, "Another shot refreshes stun");
+            Console.WriteLine("PASS " + file + ": 3-minute continuous patrol, all waypoints, mid-edge stun and recovery");
+        }
+    }
+
+    private static void CheckBlaster()
+    {
+        var blaster = new BlasterState();
+        Check(!blaster.TryFire(false) && blaster.ShotsFired == 0, "Menu/pause/end cannot fire");
+        Check(blaster.TryFire(true) && blaster.ShotsFired == 1, "Active shot starts cooldown");
+        Check(!blaster.TryFire(true), "Cannot fire twice in one frame");
+        blaster.Tick(.2f, true);
+        Check(!blaster.TryFire(true), "Cooldown blocks rapid fire");
+        float cooldown = blaster.CooldownRemaining;
+        blaster.Tick(10f, false);
+        Check(blaster.CooldownRemaining == cooldown, "Pause freezes cooldown");
+        blaster.Tick(.21f, true);
+        Check(blaster.TryFire(true) && blaster.ShotsFired == 2, "Blaster recharges in active time");
+        for (int i = 0; i < 100; i++) { blaster.Tick(.5f, true); Check(blaster.TryFire(true), "Unlimited ammunition continues recharging"); }
+        Check(new BlasterState().Ready && new BlasterState().ShotsFired == 0, "Restart creates a ready blaster and clears shot count");
+        Console.WriteLine("PASS shooting cooldown, pause/end firing gates, unlimited shots, and fresh state");
     }
 
     private static void CheckSentinel(MazeLayout layout, string patrolPath)

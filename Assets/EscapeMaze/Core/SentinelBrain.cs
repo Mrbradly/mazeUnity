@@ -4,7 +4,7 @@ using System.Globalization;
 
 namespace EscapeMaze
 {
-    public enum SentinelState { Patrol, Chase, Search }
+    public enum SentinelState { Patrol, Chase, Search, Stunned }
 
     // Pure decision logic. Unity supplies visibility and moves one grid edge at a time.
     public sealed class SentinelBrain
@@ -16,6 +16,17 @@ namespace EscapeMaze
         private float memoryRemaining;
         public SentinelState State { get; private set; }
         public MazeCell? LastSeenPlayer { get; private set; }
+        public float StunRemaining { get; private set; }
+
+        public void Stun(float seconds)
+        {
+            if (seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds))
+                throw new ArgumentOutOfRangeException(nameof(seconds));
+            StunRemaining = Math.Max(StunRemaining, seconds);
+            LastSeenPlayer = null;
+            memoryRemaining = 0f;
+            State = SentinelState.Stunned;
+        }
 
         public SentinelBrain(MazeLayout layout, MazeCell[] patrol, float memorySeconds = 3f)
         {
@@ -35,6 +46,12 @@ namespace EscapeMaze
         {
             if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
                 throw new ArgumentOutOfRangeException(nameof(deltaTime));
+            if (State == SentinelState.Stunned)
+            {
+                StunRemaining = Math.Max(0f, StunRemaining - deltaTime);
+                if (StunRemaining == 0f) State = SentinelState.Patrol;
+                return;
+            }
             if (visible && layout.IsWalkable(player, true))
             {
                 LastSeenPlayer = player;
@@ -51,7 +68,7 @@ namespace EscapeMaze
 
         public MazeCell NextStep(MazeCell current, bool doorOpen)
         {
-            if (!layout.IsWalkable(current, doorOpen)) return current;
+            if (State == SentinelState.Stunned || !layout.IsWalkable(current, doorOpen)) return current;
             MazeCell target;
             if (State != SentinelState.Patrol && LastSeenPlayer.HasValue) target = LastSeenPlayer.Value;
             else

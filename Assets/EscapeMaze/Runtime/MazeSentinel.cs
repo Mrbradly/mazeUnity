@@ -13,6 +13,7 @@ namespace EscapeMaze
         [SerializeField] private Renderer eye;
         [SerializeField] private Material patrolMaterial;
         [SerializeField] private Material alertMaterial;
+        [SerializeField] private Material stunnedMaterial;
         [SerializeField] private float patrolSpeed = 1.2f;
         [SerializeField] private float chaseSpeed = 2.1f;
         [SerializeField] private float sightRange = 8f;
@@ -21,19 +22,25 @@ namespace EscapeMaze
         [SerializeField] private float memorySeconds = 3f;
         [SerializeField] private float startGraceSeconds = 5f;
         private SentinelBrain brain;
-        private MazeCell nextCell;
+        private SentinelNavigator navigation;
         private SentinelState shownState;
         private float bobTime;
         public SentinelState State { get { return brain == null ? SentinelState.Patrol : brain.State; } }
         public float GraceRemaining { get; private set; }
         public bool PlayerVisible { get; private set; }
-        public bool IsAlert { get { return State != SentinelState.Patrol; } }
+        public bool IsAlert { get { return State == SentinelState.Chase || State == SentinelState.Search; } }
+        public bool IsStunned { get { return State == SentinelState.Stunned; } }
+        public float StunRemaining { get { return brain == null ? 0f : brain.StunRemaining; } }
 
         private void Awake()
         {
             var layout = new MazeLayout(layoutAsset.text);
-            brain = new SentinelBrain(layout, SentinelBrain.ParsePatrol(patrolAsset.text), memorySeconds);
-            nextCell = Cell(transform.position);
+            MazeCell[] route = SentinelBrain.ParsePatrol(patrolAsset.text);
+            brain = new SentinelBrain(layout, route, memorySeconds);
+            navigation = new SentinelNavigator(brain, route[0]);
+            // Use a connected waypoint as the authoritative spawn, even after an import
+            // or an Inspector edit. Horizontal navigation never depends on model height.
+            transform.position = new Vector3(navigation.X, transform.position.y, navigation.Z);
             GraceRemaining = startGraceSeconds;
             eye.sharedMaterial = patrolMaterial;
         }
@@ -43,12 +50,18 @@ namespace EscapeMaze
         // Device-independent session clock. Tests or another controller can drive this directly.
         public void Tick(float deltaTime)
         {
-            if (!session.IsRunning || session.Progress.IsFinished || deltaTime < 0f) return;
-            if (GraceRemaining > 0f)
+            if (!session.IsRunning || session.Progress.IsFinished || deltaTime < 0f ||
+                float.IsNaN(deltaTime) || float.IsInfinity(deltaTime)) return;
+            bool standby = GraceRemaining > 0f;
+            if (standby) GraceRemaining = Mathf.Max(0f, GraceRemaining - deltaTime);
+            if (IsStunned)
             {
-                GraceRemaining = Mathf.Max(0f, GraceRemaining - deltaTime);
+                PlayerVisible = false;
+                brain.Observe(Cell(player.position), false, deltaTime);
+                UpdateEye();
                 return;
             }
+            if (standby) return;
 
             Vector3 offset = player.position - transform.position;
             offset.y = 0f;
@@ -58,35 +71,41 @@ namespace EscapeMaze
             PlayerVisible = SentinelBrain.CanDetect(distance, dot, clearSight, IsAlert, sightRange,
                 Mathf.Cos(fieldOfView * .5f * Mathf.Deg2Rad));
             brain.Observe(Cell(player.position), PlayerVisible, deltaTime);
-            if (shownState != State)
-            {
-                eye.sharedMaterial = State == SentinelState.Patrol ? patrolMaterial : alertMaterial;
-                shownState = State;
-            }
+            UpdateEye();
             if (SentinelBrain.CanCatch(distance, clearSight, captureRadius))
             {
                 session.Catch();
                 return;
             }
 
-            // Finish the current edge before taking another. Replanning mid-edge would cut corners.
-            Vector3 target = World(nextCell);
-            if (Vector3.Distance(transform.position, target) < .001f)
-            {
-                nextCell = brain.NextStep(nextCell, session.Progress.DoorOpened);
-                target = World(nextCell);
-            }
             float dt = Mathf.Min(deltaTime, .1f);
-            Vector3 direction = target - transform.position;
+            Vector3 previous = transform.position;
+            navigation.Advance(dt, State == SentinelState.Patrol ? patrolSpeed : chaseSpeed, session.Progress.DoorOpened);
+            transform.position = new Vector3(navigation.X, previous.y, navigation.Z);
+            Vector3 direction = transform.position - previous;
             if (direction.sqrMagnitude > .00001f)
             {
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), dt * 8f);
-                transform.position = Vector3.MoveTowards(transform.position, target,
-                    (State == SentinelState.Patrol ? patrolSpeed : chaseSpeed) * dt);
             }
             else if (State == SentinelState.Search) transform.Rotate(0f, dt * 65f, 0f);
             bobTime += dt;
             visual.localPosition = Vector3.up * (Mathf.Sin(bobTime * 2.2f) * .035f);
+        }
+
+        public bool ApplyStun(float seconds)
+        {
+            if (!session.IsRunning || session.Progress.IsFinished) return false;
+            brain.Stun(seconds);
+            PlayerVisible = false;
+            UpdateEye();
+            return true;
+        }
+
+        private void UpdateEye()
+        {
+            if (shownState == State) return;
+            eye.sharedMaterial = IsStunned ? stunnedMaterial : IsAlert ? alertMaterial : patrolMaterial;
+            shownState = State;
         }
 
         private bool ClearSight()
@@ -106,9 +125,5 @@ namespace EscapeMaze
                 Mathf.RoundToInt(-position.z / MazeLayout.CellSize));
         }
 
-        private static Vector3 World(MazeCell cell)
-        {
-            return new Vector3(cell.X * MazeLayout.CellSize, 0f, -cell.Row * MazeLayout.CellSize);
-        }
     }
 }

@@ -9,12 +9,27 @@ namespace EscapeMaze
         [SerializeField] private DesktopMazeInput input;
         [SerializeField] private MazeInteractor interactor;
         [SerializeField] private MazeSurvey survey;
-        [SerializeField] private MazeSentinel enemy;
+        [SerializeField] private MazeSentinel[] enemies;
+        [SerializeField] private MazeBlaster blaster;
         public bool VictoryVisible { get { return session.Progress.HasWon; } }
         public bool CaughtVisible { get { return session.Progress.WasCaught; } }
         private GUIStyle micro, small, text, subtitle, title, button;
         private static readonly Color Rule = new Color(.23f, .34f, .38f, .8f);
         private static readonly string[] Directions = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+        private MazeSentinel AlertEnemy
+        {
+            get
+            {
+                MazeSentinel searching = null;
+                foreach (MazeSentinel candidate in enemies)
+                    if (candidate.IsAlert)
+                    {
+                        if (candidate.PlayerVisible) return candidate;
+                        searching = candidate;
+                    }
+                return searching;
+            }
+        }
 
         private void InitializeStyles()
         {
@@ -98,11 +113,13 @@ namespace EscapeMaze
             Label(1040, 35, 190, Clock() + "   /   " + Compass(), text);
             Label(1040, 66, 190, "M   DISCOVERED MAP", micro);
             Panel(new Rect(872, 24, 132, 76));
-            bool alert = enemy.IsAlert && !session.Progress.IsFinished;
+            bool alert = AlertEnemy != null && !session.Progress.IsFinished;
             Fill(new Rect(872, 98, 132, 2), alert ? MazePalette.Keys[2] : Rule);
-            Label(886, 38, 110, "WARDEN", small);
+            Label(886, 38, 110, "WARDENS " + enemies.Length, small);
+            int stunned = 0;
+            foreach (MazeSentinel candidate in enemies) if (candidate.IsStunned) stunned++;
             string status = session.Progress.HasWon ? "OFFLINE" : session.Progress.WasCaught ? "CAPTURED"
-                : enemy.GraceRemaining > 0f ? "STANDBY" : enemy.State.ToString().ToUpperInvariant();
+                : alert ? "PURSUIT" : stunned > 0 ? stunned + " STUNNED" : enemies[0].GraceRemaining > 0f ? "STANDBY" : "PATROLLING";
             Label(886, 66, 110, status, micro);
         }
 
@@ -131,7 +148,7 @@ namespace EscapeMaze
                 Fill(new Rect(408, 568, 34, 34), accent);
                 GUI.Label(new Rect(408, 568, 34, 34), "E", button);
                 Label(458, 560, 420, interactor.Prompt, text);
-                Label(458, 588, 420, "OR LEFT CLICK TO INTERACT", micro);
+                Label(458, 588, 420, "PRESS E TO INTERACT", micro);
             }
             if (session.MessageAge < 6f)
             {
@@ -139,10 +156,14 @@ namespace EscapeMaze
                 var toast = new GUIStyle(small) { wordWrap = true };
                 GUI.Label(new Rect(44, 596, 308, 42), session.Message, toast);
             }
-            Label(30, 675, 700, "WASD  MOVE     /     MOUSE  LOOK     /     E  INTERACT     /     ESC  PAUSE", micro);
+            Label(30, 675, 960, "WASD MOVE   /   MOUSE LOOK   /   E USE   /   LEFT CLICK FIRE   /   M MAP   /   ESC PAUSE", micro);
+            Panel(new Rect(1020, 586, 232, 54));
+            Label(1036, 594, 210, "STUN BLASTER / " + (blaster.Ready ? "READY" : "RECHARGING"), small);
+            Label(1036, 620, 210, "LEFT CLICK  /  UNLIMITED SHOTS", micro);
             Label(1070, 675, 182, "SIGNALS  " + session.Progress.KeyCount + " / 3", small);
             if (input.MapVisible) DrawMap();
-            if (enemy.IsAlert)
+            MazeSentinel enemy = AlertEnemy;
+            if (enemy != null)
             {
                 Panel(new Rect(390, 120, 500, 44));
                 Fill(new Rect(390, 120, 3, 44), MazePalette.Keys[2]);
@@ -181,11 +202,11 @@ namespace EscapeMaze
             Label(110, 355, 600, "Three keys. One sealed door. Your way home.", subtitle);
             Label(110, 401, 600, "Follow the coloured alcoves. Recover each key.", text);
             Label(110, 431, 600, "Unlock the brass seal, then step into the green exit.", text);
-            Label(110, 465, 600, "THE WARDEN PATROLS. BREAK SIGHT AT CORNERS. YOU ARE FASTER.", micro);
+            Label(110, 465, 600, "THREE WARDENS PATROL. LEFT CLICK STUNS THEM FOR FOUR SECONDS.", micro);
             Label(110, 494, 600, "PRESS ENTER OR SELECT BEGIN / RESUME EXPLORATION", small);
             if (ActionButton(new Rect(110, 535, 600, 46), session.ElapsedSeconds > 0f ? "RESUME EXPLORATION    →" : "BEGIN EXPLORATION    →"))
                 input.Capture();
-            Label(110, 592, 600, "WASD  MOVE     MOUSE  LOOK     E  USE     M  MAP     ESC  PAUSE", micro);
+            Label(110, 592, 600, "WASD MOVE   MOUSE LOOK   E USE   LEFT CLICK FIRE   M MAP   ESC PAUSE", micro);
         }
 
         private void DrawInputSetup()
@@ -224,7 +245,7 @@ namespace EscapeMaze
             Fill(new Rect(300, 177, 680, 3), MazePalette.Keys[2]);
             Label(342, 208, 600, "THE WARDEN FOUND YOU", small);
             Label(336, 255, 620, "CAUGHT.", title);
-            Label(342, 341, 590, "Break sight at corners. You can outrun the Warden.", text);
+            Label(342, 341, 590, "Break sight at corners. Left click to stun a Warden.", text);
             Fill(new Rect(342, 393, 596, 1), Rule);
             Label(342, 416, 250, "ACTIVE TIME", micro);
             Label(342, 444, 250, Clock(), subtitle);

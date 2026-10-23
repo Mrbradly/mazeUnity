@@ -1,3 +1,11 @@
+# Version 4 — Moving Wardens + Stun Blaster
+
+- Added two Wardens (three total), separate four-waypoint routes, and aggregate HUD alerts/status.
+- Replaced transform-target movement with pure, continuously tested cell-edge navigation. Spawn uses the route's connected first cell; model height cannot stall horizontal movement. Capture/release now sets active simulation explicitly. Startup grace is three active seconds. The user's stationary behavior could not be reproduced in a native Editor here, so this is not a confirmed diagnosis of their previous copy.
+- Added a primitive first-person blaster, an 18 m occluded hitscan shot, a reusable blue shot beam, four-second Warden stun/recovery, and a 0.4 s cooldown with unlimited shots. Stunned eyes turn blue; the HUD shows recharge and hit feedback.
+- Left click now fires; E remains the interaction control. Firing and movement remain separate from input. Pause freezes movement/stun/cooldown; terminal states disable firing and captures. Retry resets all Wardens and the blaster.
+- Expanded continuous navigation, stun/cooldown, serialized scene, and supplied Unity Play Mode coverage. Desktop only; no XR/Android configuration.
+
 # Desktop start/input compatibility fix
 
 - Added a visible Begin/Resume Exploration button and support for both Return and numpad Enter.

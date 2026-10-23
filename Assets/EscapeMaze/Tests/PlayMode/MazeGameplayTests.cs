@@ -29,7 +29,7 @@ namespace EscapeMaze.Tests
             Assert.IsNotNull(session);
             motor.GetComponent<DesktopMazePlayer>().enabled = false;
             motor.GetComponent<DesktopMazeInput>().enabled = false;
-            Object.FindObjectOfType<MazeSentinel>().enabled = false;
+            foreach (MazeSentinel enemy in Object.FindObjectsOfType<MazeSentinel>()) enemy.enabled = false;
             motor.transform.rotation = Quaternion.identity;
             layout = new MazeLayout(File.ReadAllText(Path.Combine(Application.dataPath, "EscapeMaze/Data/MazeLayout.txt")));
             current = layout.Find('S');
@@ -115,6 +115,8 @@ namespace EscapeMaze.Tests
             Assert.IsFalse(fresh.Progress.DoorOpened);
             Assert.IsFalse(fresh.Progress.HasWon);
             Assert.AreEqual(3, Object.FindObjectsOfType<KeyPickup>().Length);
+            Assert.AreEqual(3, Object.FindObjectsOfType<MazeSentinel>().Length);
+            Assert.AreEqual(0, Object.FindObjectOfType<MazeBlaster>().ShotsFired);
             Assert.IsTrue(Object.FindObjectOfType<MazeDoor>().GetComponent<BoxCollider>().enabled);
             Assert.IsFalse(Object.FindObjectOfType<MazeHud>().VictoryVisible);
             Assert.AreEqual(1, Object.FindObjectOfType<MazeSurvey>().Exploration.VisitedCount);

@@ -17,7 +17,11 @@ namespace EscapeMaze.Tests
         {
             yield return SceneManager.LoadSceneAsync("EscapeMaze");
             yield return null;
-            enemy = Object.FindObjectOfType<MazeSentinel>();
+            foreach (MazeSentinel candidate in Object.FindObjectsOfType<MazeSentinel>())
+            {
+                candidate.enabled = false;
+                if (candidate.name.StartsWith("Warden 1")) enemy = candidate;
+            }
             session = Object.FindObjectOfType<MazeSession>();
             player = Object.FindObjectOfType<MazePlayerMotor>();
             Assert.IsNotNull(enemy);
@@ -85,7 +89,8 @@ namespace EscapeMaze.Tests
             Assert.IsFalse(fresh.Progress.IsFinished);
             Assert.AreEqual(0, fresh.Progress.KeyCount);
             Assert.Greater(Object.FindObjectOfType<MazeSentinel>().GraceRemaining, 0f);
-            Assert.AreEqual(new Vector3(17.5f, 0f, -12.5f), Object.FindObjectOfType<MazeSentinel>().transform.position);
+            Assert.AreEqual(3, Object.FindObjectsOfType<MazeSentinel>().Length);
+            Assert.AreEqual(new Vector3(17.5f, 0f, -12.5f), GameObject.Find("Warden 1 - patrol sentinel").transform.position);
             Assert.IsFalse(Object.FindObjectOfType<MazeHud>().CaughtVisible);
             LogAssert.NoUnexpectedReceived();
         }

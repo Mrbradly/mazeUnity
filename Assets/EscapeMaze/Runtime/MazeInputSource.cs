@@ -8,6 +8,7 @@ namespace EscapeMaze
         public abstract Vector2 Move { get; }
         public abstract Vector2 LookDegrees { get; }
         public abstract bool UsePressed { get; }
+        public virtual bool FirePressed { get { return false; } }
         public abstract bool IsActive { get; }
     }
 }

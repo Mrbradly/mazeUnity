@@ -10,6 +10,7 @@ namespace EscapeMaze
         public override Vector2 Move { get { return move; } }
         public override Vector2 LookDegrees { get { return look; } }
         public override bool UsePressed { get { return usePressed; } }
+        public override bool FirePressed { get { return firePressed; } }
         public override bool IsActive { get { return DesktopInputAvailable && captured && Application.isFocused; } }
         public bool DesktopInputAvailable
         {
@@ -27,12 +28,14 @@ namespace EscapeMaze
         private Vector2 move;
         private Vector2 look;
         private bool usePressed;
+        private bool firePressed;
 
         private void Update()
         {
             move = Vector2.zero;
             look = Vector2.zero;
             usePressed = false;
+            firePressed = false;
             // Imported Unity 6 projects may disable the legacy backend. Explain that in
             // the HUD instead of throwing every frame before the player can start.
             if (!DesktopInputAvailable) { if (captured) Release(); return; }
@@ -51,13 +54,15 @@ namespace EscapeMaze
                     - (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow) ? 1 : 0);
             move = Vector2.ClampMagnitude(new Vector2(x, y), 1f);
             look = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * mouseSensitivity;
-            usePressed = Input.GetKeyDown(KeyCode.E) || Input.GetMouseButtonDown(0);
+            usePressed = Input.GetKeyDown(KeyCode.E);
+            firePressed = Input.GetMouseButtonDown(0);
         }
 
         public void Capture()
         {
             if (!DesktopInputAvailable || session.Progress.IsFinished) return;
             captured = true;
+            session.SetRunning(true);
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
@@ -65,6 +70,7 @@ namespace EscapeMaze
         public void Release()
         {
             captured = false;
+            if (session != null) session.SetRunning(false);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }

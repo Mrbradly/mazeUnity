@@ -364,17 +364,37 @@ def main():
     survey = s.script(session_obj, 'MazeSurvey', f'''  layoutAsset: {{fileID: 4900000, guid: {guid('Assets/EscapeMaze/Data/MazeLayout.txt')}, type: 3}}
   player: {{fileID: {player['transform']}}}
 ''')
+    weapon = s.obj('Desktop stun blaster', camera, (.24, -.23, .42))
+    s.cube('Blaster housing', weapon, (0, 0, 0), (.15, .13, .29), 'Trim')
+    s.cube('Blaster barrel', weapon, (0, .025, .21), (.09, .07, .18), 'Cap')
+    s.cube('Blaster energy strip', weapon, (.079, .02, .02), (.012, .035, .2), 'Sky')
+    s.cube('Blaster grip', weapon, (0, -.105, -.06), (.075, .16, .08), 'Door')
+    s.cube('Blaster muzzle glow', weapon, (0, .025, .307), (.07, .05, .016), 'Sky')
+    muzzle = s.obj('Stun muzzle', weapon, (0, .025, .32))
+    tracer = s.cube('Stun beam - dynamic', env, (0, -10, 0), (.025, .025, .1), 'Sky')
+    blaster = s.script(player, 'MazeBlaster', f'''  session: {{fileID: {session}}}
+  muzzle: {{fileID: {muzzle['transform']}}}
+  tracer: {{fileID: {tracer['transform']}}}
+  tracerRenderer: {{fileID: {s.renderer(tracer)}}}
+  range: 18
+  shotInterval: 0.4
+  stunSeconds: 4
+  tracerSeconds: 0.08
+''')
     s.script(player, 'DesktopMazePlayer', f'''  input: {{fileID: {input_id}}}
   motor: {{fileID: {motor}}}
   look: {{fileID: {look}}}
   interactor: {{fileID: {interactor}}}
+  blaster: {{fileID: {blaster}}}
   eye: {{fileID: {camera['transform']}}}
   session: {{fileID: {session}}}
 ''')
-    patrol = [tuple(map(int, line.split(','))) for line in (ASSETS / 'Data/SentinelPatrol.txt').read_text().strip().splitlines()]
-    spawn_x, spawn_row = patrol[0]
-    enemy = s.obj('The Warden - patrol sentinel', env, (spawn_x * 2.5, 0, -spawn_row * 2.5), rotation=(0, 1, 0, 0))
-    s.component(enemy, 136, 'CapsuleCollider', '''  m_Material: {fileID: 0}
+    enemy_ids = []
+    for number, patrol_path in enumerate(['Data/SentinelPatrol.txt', 'Data/SentinelPatrol2.txt', 'Data/SentinelPatrol3.txt'], 1):
+        patrol = [tuple(map(int, line.split(','))) for line in (ASSETS / patrol_path).read_text().strip().splitlines()]
+        spawn_x, spawn_row = patrol[0]
+        enemy = s.obj(f'Warden {number} - patrol sentinel', env, (spawn_x * 2.5, 0, -spawn_row * 2.5), rotation=(0, 1, 0, 0))
+        s.component(enemy, 136, 'CapsuleCollider', '''  m_Material: {fileID: 0}
   m_IsTrigger: 1
   m_Enabled: 1
   m_Radius: 0.34
@@ -382,42 +402,45 @@ def main():
   m_Direction: 1
   m_Center: {x: 0, y: 0.9, z: 0}
 ''')
-    robot = s.obj('Warden hovering visual', enemy)
-    s.cube('Warden armored torso', robot, (0, .88, 0), (.6, .7, .44), 'Trim')
-    s.cube('Warden chest plate', robot, (0, .95, .24), (.48, .42, .07), 'Cap')
-    s.cube('Warden head', robot, (0, 1.42, .015), (.76, .36, .53), 'Wall')
-    s.cube('Warden visor recess', robot, (0, 1.43, .3), (.66, .16, .06), 'Trim')
-    eye_obj = s.cube('Warden status eye', robot, (0, 1.43, .345), (.44, .065, .035), 'Amber')
-    for side in [-1, 1]:
-        s.cube(f'Warden brass shoulder {side}', robot, (side * .38, 1.12, 0), (.16, .18, .35), 'Door')
-        s.cube(f'Warden side armor {side}', robot, (side * .4, .84, 0), (.12, .38, .24), 'Wall')
-        s.cube(f'Warden hover skid {side}', robot, (side * .2, .26, 0), (.2, .12, .55), 'Trim')
-    for i in range(3):
-        s.cube(f'Warden chest vent {i}', robot, (0, .83 - i * .07, .285), (.3, .022, .02), 'Guide')
-    s.cube('Warden antenna', robot, (-.24, 1.72, 0), (.035, .22, .035), 'Trim')
-    s.cube('Warden antenna cap', robot, (-.24, 1.84, 0), (.1, .05, .1), 'Amber')
-    enemy_id = s.script(enemy, 'MazeSentinel', f'''  session: {{fileID: {session}}}
+        robot = s.obj('Warden hovering visual', enemy)
+        s.cube('Warden armored torso', robot, (0, .88, 0), (.6, .7, .44), 'Trim')
+        s.cube('Warden chest plate', robot, (0, .95, .24), (.48, .42, .07), 'Cap')
+        s.cube('Warden head', robot, (0, 1.42, .015), (.76, .36, .53), 'Wall')
+        s.cube('Warden visor recess', robot, (0, 1.43, .3), (.66, .16, .06), 'Trim')
+        eye_obj = s.cube('Warden status eye', robot, (0, 1.43, .345), (.44, .065, .035), 'Amber')
+        for side in [-1, 1]:
+            s.cube(f'Warden brass shoulder {side}', robot, (side * .38, 1.12, 0), (.16, .18, .35), 'Door')
+            s.cube(f'Warden side armor {side}', robot, (side * .4, .84, 0), (.12, .38, .24), 'Wall')
+            s.cube(f'Warden hover skid {side}', robot, (side * .2, .26, 0), (.2, .12, .55), 'Trim')
+        for i in range(3):
+            s.cube(f'Warden chest vent {i}', robot, (0, .83 - i * .07, .285), (.3, .022, .02), 'Guide')
+        s.cube('Warden antenna', robot, (-.24, 1.72, 0), (.035, .22, .035), 'Trim')
+        s.cube('Warden antenna cap', robot, (-.24, 1.84, 0), (.1, .05, .1), 'Amber')
+        enemy_id = s.script(enemy, 'MazeSentinel', f'''  session: {{fileID: {session}}}
   layoutAsset: {{fileID: 4900000, guid: {guid('Assets/EscapeMaze/Data/MazeLayout.txt')}, type: 3}}
-  patrolAsset: {{fileID: 4900000, guid: {guid('Assets/EscapeMaze/Data/SentinelPatrol.txt')}, type: 3}}
+  patrolAsset: {{fileID: 4900000, guid: {guid('Assets/EscapeMaze/' + patrol_path)}, type: 3}}
   player: {{fileID: {player['transform']}}}
   visual: {{fileID: {robot['transform']}}}
   eye: {{fileID: {s.renderer(eye_obj)}}}
   patrolMaterial: {{fileID: 2100000, guid: {guid('Assets/EscapeMaze/Materials/Amber.mat')}, type: 2}}
   alertMaterial: {{fileID: 2100000, guid: {guid('Assets/EscapeMaze/Materials/Danger.mat')}, type: 2}}
+  stunnedMaterial: {{fileID: 2100000, guid: {guid('Assets/EscapeMaze/Materials/Sky.mat')}, type: 2}}
   patrolSpeed: 1.2
   chaseSpeed: 2.1
   sightRange: 8
   fieldOfView: 120
   captureRadius: 0.7
   memorySeconds: 3
-  startGraceSeconds: 5
+  startGraceSeconds: 3
 ''')
+        enemy_ids.append(enemy_id)
     s.script(session_obj, 'MazeHud', f'''  session: {{fileID: {session}}}
   input: {{fileID: {input_id}}}
   interactor: {{fileID: {interactor}}}
   survey: {{fileID: {survey}}}
-  enemy: {{fileID: {enemy_id}}}
-''')
+  blaster: {{fileID: {blaster}}}
+  enemies:
+''' + ''.join(f'  - {{fileID: {enemy_id}}}\n' for enemy_id in enemy_ids))
 
     keys = s.obj('Three collectible keys', env)
     for i, token in enumerate('abc'):
@@ -588,7 +611,7 @@ PlayerSettings:
         if path.suffix != '.meta':
             meta(path)
     stats = {'gameObjects': len(s.objects), 'primitiveCubes': sum(c[1] == 33 for c in s.components),
-             'walls': sum(row.count('#') for row in layout), 'keys': 3, 'enemies': 1, 'materials': len(colors),
+             'walls': sum(row.count('#') for row in layout), 'keys': 3, 'enemies': len(enemy_ids), 'materials': len(colors),
              'triangles': sum(c[1] == 33 for c in s.components) * 12, 'layoutWidth': len(layout[0]), 'layoutHeight': len(layout)}
     (ROOT / 'Verification/scene-stats.json').write_text(json.dumps(stats, indent=2) + '\n')
     print(json.dumps(stats, indent=2))

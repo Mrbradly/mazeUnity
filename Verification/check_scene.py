@@ -101,12 +101,24 @@ def main():
     check(len(scripts['MazeDoor'][0]['keyMaterials']) == 3, 'Door has three signal materials')
     check(len(scripts['MazeSurvey']) == 1, 'Discovered map has one survey source')
     check(len(scripts['MazeStaticGeometry']) == 1, 'Static decor has one batching root')
-    check(len(scripts['MazeSentinel']) == 1, 'Exactly one Warden')
-    sentinel = scripts['MazeSentinel'][0]
-    check(0 < sentinel['patrolSpeed'] < sentinel['chaseSpeed'] < scripts['MazePlayerMotor'][0]['speed'], 'Player can outrun patrol and chase')
-    check(0 < sentinel['captureRadius'] < sentinel['sightRange'], 'Capture range smaller than detection range')
-    check(sentinel['startGraceSeconds'] >= 3, 'Enemy gives startup grace')
-    check(0 < sentinel['fieldOfView'] <= 180 and sentinel['memorySeconds'] > 0, 'Finite directional sight and search memory')
+    check(len(scripts['MazeSentinel']) == 3, 'Exactly three Wardens')
+    check(len({b['patrolAsset']['guid'] for b in scripts['MazeSentinel']}) == 3, 'Wardens use independent routes')
+    for sentinel in scripts['MazeSentinel']:
+        check(0 < sentinel['patrolSpeed'] < sentinel['chaseSpeed'] < scripts['MazePlayerMotor'][0]['speed'], 'Player can outrun patrol and chase')
+        check(0 < sentinel['captureRadius'] < sentinel['sightRange'], 'Capture range smaller than detection range')
+        check(sentinel['startGraceSeconds'] >= 3, 'Enemy gives startup grace')
+        check(0 < sentinel['fieldOfView'] <= 180 and sentinel['memorySeconds'] > 0, 'Finite directional sight and search memory')
+        enemy_transform = transform_by_object[sentinel['m_GameObject']['fileID']]['Transform']
+        route_path = assets[sentinel['patrolAsset']['guid']]
+        route = [tuple(map(int, line.split(','))) for line in route_path.read_text().strip().splitlines()]
+        check(enemy_transform['m_LocalPosition'] == {'x': route[0][0] * 2.5, 'y': 0, 'z': -route[0][1] * 2.5}, 'Warden starts at first patrol waypoint')
+        check(any(d.get('CapsuleCollider', {}).get('m_GameObject', {}).get('fileID') == sentinel['m_GameObject']['fileID'] and
+                  d['CapsuleCollider']['m_IsTrigger'] == 1 for d in docs), 'Enemy uses a shootable trigger volume')
+    check(len(scripts['MazeHud'][0]['enemies']) == 3, 'HUD tracks all Wardens')
+    check(len(scripts['MazeBlaster']) == 1, 'One modular blaster')
+    blaster = scripts['MazeBlaster'][0]
+    check(blaster['stunSeconds'] == 4 and blaster['range'] == 18 and blaster['shotInterval'] == .4, 'Stun/range/cooldown configured')
+    check(scripts['DesktopMazePlayer'][0]['blaster'] == scripts['MazeHud'][0]['blaster'], 'Input driver and HUD share the blaster')
     check(len(scripts['MazeExitZone']) == 1, 'Exactly one exit')
     check(len(scripts['MazePlayerMotor']) == 1, 'Exactly one player')
     key_objects = {b['m_GameObject']['fileID'] for b in scripts['KeyPickup']}
@@ -120,18 +132,16 @@ def main():
                 return True
             transform = records[parent_id]
         return False
-    for body in scripts['KeyPickup'] + scripts['MazeDoor'] + scripts['MazePlayerMotor'] + scripts['MazeSentinel']:
+    for body in scripts['KeyPickup'] + scripts['MazeDoor'] + scripts['MazePlayerMotor'] + scripts['MazeSentinel'] + scripts['MazeBlaster']:
         check(not is_static(body['m_GameObject']['fileID']), 'Moving gameplay objects are outside static batch root')
     for body in scripts['KeyPickup']:
         renderer = records[body['floorIndicator']['fileID']]['MeshRenderer']
         check(not is_static(renderer['m_GameObject']['fileID']), 'Mutable pickup indicator is outside static batch root')
     meshes = [d for d in docs if 'MeshFilter' in d]
     check(len(meshes) * 12 <= 10000, 'Primitive geometry stays under 10,000 triangles')
-    enemy_transform = transform_by_object[sentinel['m_GameObject']['fileID']]['Transform']
-    route = [tuple(map(int, line.split(','))) for line in (ASSETS / 'EscapeMaze/Data/SentinelPatrol.txt').read_text().strip().splitlines()]
-    check(enemy_transform['m_LocalPosition'] == {'x': route[0][0] * 2.5, 'y': 0, 'z': -route[0][1] * 2.5}, 'Warden starts at first patrol waypoint')
-    check(any(d.get('CapsuleCollider', {}).get('m_GameObject', {}).get('fileID') == sentinel['m_GameObject']['fileID'] and
-              d['CapsuleCollider']['m_IsTrigger'] == 1 for d in docs), 'Enemy volume is a trigger, so it does not shove the player')
+    tracer_object = records[blaster['tracerRenderer']['fileID']]['MeshRenderer']['m_GameObject']['fileID']
+    check(not is_static(tracer_object), 'Shot visual is outside static batching')
+    check(not any(d.get('BoxCollider', {}).get('m_GameObject', {}).get('fileID') == tracer_object for d in docs), 'Tracer cannot block rays')
     for doc in docs:
         if 'SphereCollider' in doc and doc['SphereCollider']['m_GameObject']['fileID'] in key_objects:
             check(doc['SphereCollider']['m_IsTrigger'] == 1, 'Keys do not block walking')

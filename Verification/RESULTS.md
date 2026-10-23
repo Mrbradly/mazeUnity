@@ -1,57 +1,38 @@
 # Verification results
 
-Date: 2026-10-23 (UTC). Version 3 / The Warden.
-
-Start/input follow-up: added a clickable Begin/Resume button, numpad Enter support, and a compile-flag guard for projects using the new Input System only. Such projects now show explicit setup instructions before any legacy Input call. Native keyboard/button interaction still needs verification in Unity; no local user Console message was available to confirm the original cause. Render-pipeline, VR, and Android settings were not changed.
-
-Runtime reference compilation passed with zero warnings/errors for both `ENABLE_LEGACY_INPUT_MANAGER` and new-system-only `ENABLE_INPUT_SYSTEM` configurations. Serialized asset validation remains at 20,871 passed assertions. These checks do not inject native key events or verify Game view focus, cursor capture, or UI clicks in the Editor.
-
-Material repair follow-up: added `Assets/EscapeMaze/Editor/MazeMaterialRepair.cs` and an Editor-only assembly definition after a user reported pink Standard materials in a newer Unity project. The helper chooses Standard or URP Simple Lit according to the active renderer and preserves colour/emission. The runtime checks below predate this Editor-only addition; native Editor compilation, automatic repair, and on-screen rendering remain unverified. The available environment still has no Unity Editor.
-
-The follow-up serialized scene/asset validation passed 20,871 assertions. The material repair source was also reference-compiled with the available UnityEditor managed reference and Unity 2022.3.62 UnityEngine references; this does not launch the Editor or verify a URP conversion. Per-asset saving is resolved at runtime for compatibility with older Editor assemblies. No reference DLLs were added to the repository.
+Date: 2026-10-23 (UTC). Version 4 / Moving Wardens + Stun Blaster.
 
 ## Passed in this environment
 
 | Check | Result |
 | --- | --- |
-| Runtime C# source compile | 0 warnings, 0 errors; all files under Core and Runtime compiled together |
-| Device-independent rules, navigation, discovery, and sentinel decisions | 3,031 assertions passed |
-| Complete grid route, key order 012 | Passed; 90 grid steps |
-| Complete grid route, key order 021 | Passed; 102 grid steps |
-| Complete grid route, key order 102 | Passed; 90 grid steps |
-| Complete grid route, key order 120 | Passed; 102 grid steps |
-| Complete grid route, key order 201 | Passed; 66 grid steps |
-| Complete grid route, key order 210 | Passed; 66 grid steps |
-| Serialized scene, component, and asset validation | 20,862 assertions passed |
+| Runtime C# reference compile, `ENABLE_LEGACY_INPUT_MANAGER` | 0 warnings, 0 errors |
+| Runtime C# reference compile, new-system-only `ENABLE_INPUT_SYSTEM` | 0 warnings, 0 errors |
+| Pure gameplay/navigation/stun/cooldown checks | 46,488 assertions passed |
+| Saved scene, component and asset validation | 22,474 assertions passed |
+| All six key collection orders, unlock, exit rules | Passed |
+| Three independent continuous patrol simulations | Each ran 3 minutes at 20 simulated steps/s, visited every waypoint, stayed on corridor edges, and did not stall |
+| Mid-edge stun and recovery, refreshed stun | Passed for all three routes |
+| Fire cooldown, pause/end firing gates, unlimited shots, fresh state | Passed |
 
-`RulesCheck` executes the actual `MazeProgress`, `MazeLayout`, `MazeExploration`, and `SentinelBrain` C# sources. It checks reachable keys, no locked-door bypass, route adjacency, all six key orders, duplicate collection, invalid IDs, 0/1/2-key rejection, required unlock before victory, one-shot victory, clean new state, malformed layouts, local-only discovery, ignored invalid/wall visits, repeat visits, and fresh survey state. These simulations traverse grid cells, not Unity colliders.
+`RulesCheck` executes the actual `MazeProgress`, `MazeLayout`, `MazeExploration`, `SentinelBrain`, `SentinelNavigator`, and `BlasterState` C# sources. It checks required keys/unlock/exit order, no locked-door bypass, all six key orders, duplicate/invalid key handling, terminal states, local map discovery, patrol routing, directional detection/capture gates, last-sighting search and expiry, continuous movement, four-second stun, and cooldown behavior. Visibility/obstruction are supplied signals in pure tests. These simulations do not run Unity physics or supply keyboard/mouse events.
 
-Sentinel checks cover a 400-step closed-door patrol soak, cardinal-only steps, visiting all four waypoints, range/cone boundaries, alerted sight, loss of sight through a supplied obstruction signal, capture distance and obstruction gates, chase → last-known-position search → patrol, reacquisition, blocked/open door routing, invalid patrol data, and loss/victory mutual exclusion. The obstruction signal is supplied by these pure tests; native Physics.Linecast behavior is unverified here.
+Continuous navigation checks advance each of the three routes for 3,600 frames at 0.05 seconds/frame. They check actual world coordinates, a speed bound, absence of consecutive stalled frames, cardinal grid edges, walkable cells, and reaching all waypoints. At a waypoint U-turn the net frame displacement can be less than the distance travelled; the test allows that reversal. Each simulated Warden covers over 210 metres in three active minutes. Shots stop motion mid-edge; expiry resumes movement from that edge. Search does not obtain the hidden player's position.
 
-`check_scene.py` parses the saved `.unity`, materials, metadata, and settings. It checks internal/external references, GUID uniqueness, component ownership, parent/child links, serialized script assignments, solid wall locations/sizes, unique key IDs and trigger colliders, player/door/exit locations, the kinematic exit trigger, camera/light settings, materials, build scene inclusion, desktop input, and absence of Android/XR choices. These checks do not prove Unity imports or renders the scene.
+`check_scene.py` parses the saved scene/materials/settings and checks file IDs/GUIDs, hierarchy, all serialized assignments, three distinct patrol assets and correct spawns, shootable enemy trigger volumes, the blaster's muzzle/beam references and settings, all-three HUD references, solid walls, keys, door/exit setup, mutable objects excluded from static batching, desktop input configuration, and no XR/Android choices. It does not prove native import or rendering.
 
-Additional scene checks cover live door indicator/material arrays, map source assignments, the static batching root, exclusion of movable objects and mutable pickup indicators from that root, and a geometry budget below 10,000 triangles. Sentinel checks cover exactly one enemy, reference assignments, spawn matching the patrol source, a trigger volume, startup grace, range/cone/memory configuration, exclusion from static batching, and speeds below the player's walking speed. Current scene: 565 objects, 544 primitive cubes, 6,528 triangles, thirteen materials. No draw call, FPS, or headset performance result is claimed.
+The saved scene contains **609 GameObjects, 582 primitive cubes, 6,984 triangles, 13 shared texture-free materials, three Wardens, three keys, and one blaster**. It stays under the existing 10,000-triangle geometry guard. No draw-call, frame-time, or device-performance result is claimed.
 
-Compilation used .NET SDK 8.0.426 with C# language version 9 and real UnityEngine managed assemblies for Unity 2022.3.62, obtained from `RocketModFix.UnityEngine.Redist` NuGet version `2022.3.62.3`. No Unity API stubs or mocks were used. The external reference DLLs are not shipped with this project. This checks C# API/type correctness against those assemblies; it is not compilation by the Unity Editor, a player build, or native runtime execution. Unity test assembly compilation is pending the Editor's package import.
+Runtime compilation used .NET SDK 8.0.426 / C# 9 and actual UnityEngine managed reference assemblies for Unity 2022.3.62 (`RocketModFix.UnityEngine.Redist` 2022.3.62.3). No Unity API stubs/mocks were used. Reference DLLs and tooling are outside the project and are not distributed. A reference compile checks managed API/types; it is not Unity Editor compilation or a player build.
 
-## Not run / unverified
+## Unity verification still required
 
-- Unity Editor import and script compilation.
-- The eight supplied Unity Edit Mode tests and six Unity Play Mode tests.
-- Native CharacterController wall/door collision, raycast interaction, and exit trigger callbacks.
-- Desktop mouse/keyboard, rendered maze/HUD/victory screen, map toggle, focus effects, live indicators, static batching, and replay button behavior.
-- Native enemy motion/sight/capture, chase balance, caught/retry screen, startup grace, and pause/win behavior.
-- Standalone player build.
-- Android build, headset rendering/input, headset compatibility, and device performance.
+No Unity Editor is installed in this environment. The supplied Unity Edit Mode and Play Mode tests have **not run**. Native physics, rendering, cursor capture, keyboard/mouse, material repair, HUD buttons, wall/door collisions, actual raycasts, exit triggers, enemy capture/stun, and replay require Unity testing. No desktop executable or Android build was produced.
 
-The cloud workspace initially contained no Unity project, Unity Editor, or C# compiler. A local .NET SDK was installed outside the project for the reference compile and rules checks. No Unity Editor was installed, so an engine run was unavailable. No Unity tests or device checks are claimed as passed.
+Existing Edit Mode suites cover key/exit rules, discovery, sentinel perception/search, and terminal states. Existing Play Mode suites isolate wall/door collision, pickups, inventory/indicator feedback, exit victory/reload, sight occlusion, chase/capture, pause, and retry. Maze tests disable all enemies to isolate the objective. Enemy tests disable automatic Update and drive the real adapters directly.
 
-## Unity tests supplied for the next validation step
+New `BlasterGameplayTests` cover all three Wardens moving/pausing, a native ray hitting/stunning a Warden, mid-stun pause, recovery, blocked/recharged firing, walls/range blocking shots, and victory preventing further shots. These are test cases supplied for Unity, not passed results. Run them using **Window → General → Test Runner**, Edit Mode and Play Mode, or `Tools/run_unity_tests.sh` with a licensed Editor.
 
-Edit Mode: duplicate keys cannot unlock; all keys → door → exit is required; invalid key IDs; local survey knowledge; keys reachable and no locked exit bypass.
+The user reported stationary Wardens in their prior copy. Without their native runtime/Console a cause was not established. Version 4 replaces the transform-target loop with tested continuous cell-edge navigation, uses connected route spawns independently of model height, and explicitly activates the session on desktop capture/resume. This is not a claim to have reproduced the original issue in Unity.
 
-Sentinel Edit Mode: last-sighting search and timeout; sight/capture obstruction/cone gates; caught/victory mutual exclusion.
-
-Play Mode: actual character wall and locked-door collision; ray range and wall occlusion; traversal to all pickups, floor socket/door indicator material changes, unlock, exit trigger, victory state, and replay reset including the survey. Tests disable the keyboard driver and feed the real motor/interactor directly, so manual mouse/keyboard and visual checks are still needed even after these pass.
-
-Sentinel Play Mode: active-time grace and pause; native open-corridor sight and wall obstruction; chase/search, contact capture, caught HUD/timer freeze, full retry reset; victory stopping the Warden. Existing maze tests disable the enemy to isolate the key/exit flow. Enemy tests disable its automatic Update and drive the actual Tick method explicitly. Native suites remain unrun.
+The user reports playing the previous desktop version successfully. That does not establish native correctness of these new features. No VR/Android configuration was added; ClassVR runtime/render SDK, Android target API, and input mappings still need confirmation before device work.
