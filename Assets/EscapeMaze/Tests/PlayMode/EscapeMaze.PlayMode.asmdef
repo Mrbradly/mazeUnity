@@ -1,0 +1,5 @@
+{
+  "name": "EscapeMaze.PlayMode",
+  "references": ["EscapeMaze"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

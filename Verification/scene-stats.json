@@ -1,0 +1,11 @@
+{
+  "gameObjects": 565,
+  "primitiveCubes": 544,
+  "walls": 92,
+  "keys": 3,
+  "enemies": 1,
+  "materials": 13,
+  "triangles": 6528,
+  "layoutWidth": 13,
+  "layoutHeight": 11
+}

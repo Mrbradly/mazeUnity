@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>0649</NoWarn>
+    <AssemblyName>EscapeMaze.CompileCheck</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Assets/EscapeMaze/Core/*.cs" />
+    <Compile Include="../Assets/EscapeMaze/Runtime/*.cs" />
+    <Reference Include="$(UnityReferencePath)/UnityEngine*.dll" />
+  </ItemGroup>
+</Project>

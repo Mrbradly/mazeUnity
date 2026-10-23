@@ -1,0 +1,19 @@
+# Version 3 — The Warden
+
+- Added a single mechanical sentinel assembled from sixteen primitive cubes, with an amber/red state eye. Kept it outside static batching.
+- Added four-point patrol, directional native line-of-sight detection, slower-than-player pursuit, last-sighting search, and return to patrol. Uses the existing maze grid without NavMesh packages or baking.
+- Added active-time startup grace, shared pause handling, clear pursuit/search warnings, capture rules, and a caught/retry screen.
+- Made caught/victory states mutually exclusive and blocked further movement, interaction, key collection, unlocks, and timer progress after either ending. Retry resets the entire scene and enemy.
+- Expanded pure C# decision tests, serialized enemy validation, and separate Unity Play Mode enemy scenarios. Native Unity execution remains pending.
+- Preserved desktop-only configuration and modular controls; no VR or Android changes.
+
+# Version 2 — LUMEN / The Way Out
+
+- Replaced the plain wall/floor presentation with slate walls, dark plinths, pale caps, inset tiles, and thin emissive guide strips. Paths near key alcoves use their key's colour.
+- Built 01/02/03 alcove signs from primitive seven-segment geometry, with framed floor sockets and hovering keys.
+- Reworked the exit into a two-panel brass seal with a center seam, lock housing, three live signal indicators, lit frame, and striped landing. Door movement uses an eased lift.
+- Replaced default UI boxes with a coordinated desktop HUD: key status cards, compass, active timer, coloured focus reticle, contextual activation prompt, timed notifications, welcome screen, and victory/replay screen.
+- Added optional local discovery mapping on M, with isolated C# discovery rules and a Unity position adapter. The map does not reveal remote objectives and resets on replay.
+- Added focus feedback to the interaction boundary and spent socket feedback on collection. Kept keyboard/mouse reads confined to the desktop input adapter.
+- Added static batching for immovable decoration; excluded the door, pickups, player, and mutable socket indicators.
+- Expanded non-Unity and Unity test coverage. Native Unity runs remain pending; no VR/Android configuration or headset assumptions were added.

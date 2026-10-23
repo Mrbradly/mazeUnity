@@ -1,0 +1,6 @@
+{
+  "name": "EscapeMaze.EditMode",
+  "references": ["EscapeMaze"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
